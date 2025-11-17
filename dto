@@ -1,0 +1,36 @@
+package com.example.railway.dto;
+
+import java.util.List;
+
+public class PathResponse {
+    private boolean success;
+    private String message;
+    private List<String> path;
+    private Integer distanceMeters;
+
+    public static PathResponse success(List<String> path, Integer distanceMeters) {
+        PathResponse r = new PathResponse();
+        r.success = true;
+        r.path = path;
+        r.distanceMeters = distanceMeters;
+        r.message = "Path found";
+        return r;
+    }
+
+    public static PathResponse error(String msg) {
+        PathResponse r = new PathResponse();
+        r.success = false;
+        r.message = msg;
+        return r;
+    }
+
+    // getters/setters
+    public boolean isSuccess() { return success; }
+    public void setSuccess(boolean success) { this.success = success; }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
+    public List<String> getPath() { return path; }
+    public void setPath(List<String> path) { this.path = path; }
+    public Integer getDistanceMeters() { return distanceMeters; }
+    public void setDistanceMeters(Integer distanceMeters) { this.distanceMeters = distanceMeters; }
+}
