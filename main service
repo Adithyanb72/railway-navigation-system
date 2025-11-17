@@ -1,0 +1,138 @@
+package com.example.railway.service;
+
+import com.example.railway.dto.PathResponse;
+import com.example.railway.model.Route;
+import com.example.railway.model.Station;
+import com.example.railway.repo.RouteRepository;
+import com.example.railway.repo.StationRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class NavigationService {
+
+    private final StationRepository stationRepo;
+    private final RouteRepository routeRepo;
+
+    public NavigationService(StationRepository stationRepo, RouteRepository routeRepo) {
+        this.stationRepo = stationRepo;
+        this.routeRepo = routeRepo;
+    }
+
+    // Create station
+    public Station createStation(String name) {
+        Optional<Station> existing = stationRepo.findByName(name);
+        return existing.orElseGet(() -> stationRepo.save(new Station(name)));
+    }
+
+    // Create a route (bidirectional)
+    public Route createRoute(String fromName, String toName, int distanceMeters) {
+        Station from = createStation(fromName);
+        Station to = createStation(toName);
+        // Save one Route record (we interpret it as bidirectional)
+        return routeRepo.save(new Route(from, to, distanceMeters));
+    }
+
+    public List<Station> getAllStations() {
+        return stationRepo.findAll();
+    }
+
+    public List<Route> getAllRoutes() {
+        return routeRepo.findAll();
+    }
+
+    // Build adjacency map for algorithm
+    private Map<Long, List<Edge>> buildGraph() {
+        Map<Long, List<Edge>> graph = new HashMap<>();
+        // ensure all stations present
+        for (Station s : stationRepo.findAll()) {
+            graph.putIfAbsent(s.getId(), new ArrayList<>());
+        }
+
+        for (Route r : routeRepo.findAll()) {
+            Long a = r.getFromStation().getId();
+            Long b = r.getToStation().getId();
+            int w = r.getDistanceMeters();
+
+            // add both directions (treat as undirected)
+            graph.get(a).add(new Edge(b, w));
+            graph.get(b).add(new Edge(a, w));
+        }
+        return graph;
+    }
+
+    // Dijkstra: find shortest path between station names
+    public PathResponse shortestPath(String startName, String endName) {
+        Optional<Station> startOpt = stationRepo.findByName(startName);
+        Optional<Station> endOpt = stationRepo.findByName(endName);
+
+        if (startOpt.isEmpty() || endOpt.isEmpty()) {
+            return PathResponse.error("Start or end station not found");
+        }
+
+        Station start = startOpt.get();
+        Station end = endOpt.get();
+
+        Map<Long, List<Edge>> graph = buildGraph();
+
+        // Dijkstra data structures
+        Map<Long, Integer> dist = new HashMap<>();
+        Map<Long, Long> prev = new HashMap<>();
+        for (Long node : graph.keySet()) {
+            dist.put(node, Integer.MAX_VALUE);
+        }
+        dist.put(start.getId(), 0);
+
+        PriorityQueue<Node> pq = new PriorityQueue<>(Comparator.comparingInt(n -> n.dist));
+        pq.add(new Node(start.getId(), 0));
+
+        while (!pq.isEmpty()) {
+            Node cur = pq.poll();
+            if (cur.dist > dist.get(cur.id)) continue;
+
+            if (cur.id.equals(end.getId())) break; // reached target
+
+            for (Edge e : graph.getOrDefault(cur.id, Collections.emptyList())) {
+                int nd = dist.get(cur.id) + e.weight;
+                if (nd < dist.getOrDefault(e.to, Integer.MAX_VALUE)) {
+                    dist.put(e.to, nd);
+                    prev.put(e.to, cur.id);
+                    pq.add(new Node(e.to, nd));
+                }
+            }
+        }
+
+        if (!dist.containsKey(end.getId()) || dist.get(end.getId()) == Integer.MAX_VALUE) {
+            return PathResponse.error("No path found between " + startName + " and " + endName);
+        }
+
+        // Reconstruct path (station ids -> names)
+        List<Long> pathIds = new ArrayList<>();
+        Long step = end.getId();
+        while (step != null) {
+            pathIds.add(step);
+            step = prev.get(step);
+        }
+        Collections.reverse(pathIds);
+
+        List<String> pathNames = pathIds.stream()
+                .map(id -> stationRepo.findById(id).map(Station::getName).orElse("?"))
+                .collect(Collectors.toList());
+
+        return PathResponse.success(pathNames, dist.get(end.getId()));
+    }
+
+    // Helper classes
+    private static class Edge {
+        Long to;
+        int weight;
+        Edge(Long to, int weight) { this.to = to; this.weight = weight; }
+    }
+    private static class Node {
+        Long id;
+        int dist;
+        Node(Long id, int dist) { this.id = id; this.dist = dist; }
+    }
+}
