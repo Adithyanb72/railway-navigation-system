@@ -1,0 +1,11 @@
+Add route:curl -X POST "http://localhost:8080/api/routes?from=Platform%201&to=Platform%202&distanceMeters=80"
+List stations:curl http://localhost:8080/api/stations
+Get shortest path:curl "http://localhost:8080/api/path?from=Entrance&to=Restroom"
+From the project root run:mvn spring-boot:run
+Open:
+
+REST API: http://localhost:8080/api
+
+H2 console: http://localhost:8080/h2-console (JDBC URL: jdbc:h2:mem:railwaydb, user sa, empty password)
+
+Optional client: http://localhost:8080/
