@@ -1,0 +1,58 @@
+package com.example.railway.controller;
+
+import com.example.railway.dto.PathResponse;
+import com.example.railway.model.Route;
+import com.example.railway.model.Station;
+import com.example.railway.service.NavigationService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api")
+public class NavigationController {
+
+    private final NavigationService service;
+
+    public NavigationController(NavigationService service) {
+        this.service = service;
+    }
+
+    // Create station
+    @PostMapping("/stations")
+    public ResponseEntity<Station> createStation(@RequestParam String name) {
+        return ResponseEntity.ok(service.createStation(name));
+    }
+
+    // List stations
+    @GetMapping("/stations")
+    public ResponseEntity<List<Station>> listStations() {
+        return ResponseEntity.ok(service.getAllStations());
+    }
+
+    // Create route (distance in meters)
+    @PostMapping("/routes")
+    public ResponseEntity<Route> createRoute(
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam int distanceMeters) {
+        return ResponseEntity.ok(service.createRoute(from, to, distanceMeters));
+    }
+
+    // List routes
+    @GetMapping("/routes")
+    public ResponseEntity<List<Route>> listRoutes() {
+        return ResponseEntity.ok(service.getAllRoutes());
+    }
+
+    // Shortest path 
+    @GetMapping("/path")
+    public ResponseEntity<PathResponse> shortestPath(
+            @RequestParam String from,
+            @RequestParam String to) {
+        PathResponse resp = service.shortestPath(from, to);
+        if (!resp.isSuccess()) return ResponseEntity.badRequest().body(resp);
+        return ResponseEntity.ok(resp);
+    }
+}
