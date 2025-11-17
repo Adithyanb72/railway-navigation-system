@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Railway Navigation - Demo</title>
+</head>
+<body>
+  <h1>Railway Navigation Demo</h1>
+  <div>
+    <h3>Find shortest path</h3>
+    <input id="from" placeholder="From station" />
+    <input id="to" placeholder="To station" />
+    <button onclick="findPath()">Find</button>
+    <pre id="result"></pre>
+  </div>
+
+  <div>
+    <h3>All stations</h3>
+    <button onclick="listStations()">Refresh</button>
+    <pre id="stations"></pre>
+  </div>
+
+<script>
+async function findPath() {
+  const from = document.getElementById('from').value;
+  const to = document.getElementById('to').value;
+  const res = await fetch(`/api/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  const data = await res.json();
+  document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+}
+
+async function listStations() {
+  const res = await fetch('/api/stations');
+  const data = await res.json();
+  document.getElementById('stations').innerText = JSON.stringify(data, null, 2);
+}
+</script>
+</body>
+</html>
